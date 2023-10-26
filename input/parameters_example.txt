@@ -1,0 +1,39 @@
+{
+    "RUN_ID": "DDC_CT_eid",
+    "forward_project": true,
+    "back_project": true,
+        
+    "phantom_type": "voxel",
+    "phantom_id": "ddc_generation4",
+    "phantom_filename": "./input/phantom/DDC_generation4.bin",
+    "matcomp_filename": "./input/phantom/ddc_materials.csv",
+    "Nx": 512,
+    "Ny": 512,
+    "Nz": 512,
+    "dx": 0.00625,
+    "dy": 0.00625,
+    "dz": 0.00625,
+    "z_index": [444, 445, 446, 447, 448, 449, 450, 451, 452, 453, 454, 455, 456,
+           457, 458, 459, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469,
+           470, 471, 472, 473, 474, 475, 476],
+    
+    "scanner_geometry": "fan_beam",
+    "SID": 10.0,
+    "SDD": 30.0,
+    "N_channels": 1024,
+    "N_projections": 438,
+    "fan_angle_total": 0.33807,
+    "rotation_angle_total": 3.82227,
+    "detector_px_height": 0.00625,
+    "detector_mode": "eid",
+    "filename_detector": "ideal",
+
+    "spectrum_id": "120kV",
+    "spectrum_filename": "./input/spectrum/120kV_1mGy_float32.bin",
+    "N_photons_per_cm2_per_scan": 500e8,
+
+    "N_recon_matrix": 256,
+    "FOV_recon": 3.2,
+    "ramp_filter_percent_Nyquist": 1.0
+
+}
