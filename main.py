@@ -16,7 +16,7 @@ from back_project import get_recon
 
 
 param_file = 'input/parameters_example.txt'
-main_output_dir = './output/'  # set `None` to not save output
+main_output_dir = './output/'  
 show_imgs = True
 
 
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     N_runs = len(all_params)
 
     for i_run, params in enumerate(all_params):
-        print('\n', f'Run {i_run + 1} / {N_runs}')
+        print('\n', f'*** Run {i_run + 1} / {N_runs} ***')
         
         ## Unpack the parameters for this loop.
         run_id, do_forward_projection, do_back_projection = params[:3]
@@ -67,11 +67,11 @@ if __name__ == '__main__':
             N_matrix, FOV, ramp = params[6:9]
         out_dir = os.path.join(main_output_dir, run_id, f'run_{i_run:03}/')
         os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(param_file, os.path.join(main_output_dir, run_id, 'params.txt'))
+        shutil.copy(param_file, os.path.join(out_dir, 'params.txt'))
 
         ## Simulate.
         if do_forward_projection:
-            print('\n', 'Forward projecting!')
+            print('Forward projecting!')
             sino_raw, sino_log = get_sino(ct, phantom, spec)   
             sino_raw.astype(np.float32).tofile(out_dir+'sino_raw_float32.bin')
             sino_log.astype(np.float32).tofile(out_dir+'sino_log_float32.bin')
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                 plt.show()
                 
         if do_back_projection:
-            print('\n', 'Back projecting!')
+            print('Back projecting!')
             try:
                 sino_log
             except:  # if no sino_log variable, try to load from file
