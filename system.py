@@ -189,7 +189,7 @@ class FanBeamGeometry:
         else:
             self.det_mode = 'pcd'  # photon counting
             
-        if detector_file is None:  # ideal detector?
+        if detector_file is None or detector_file is 'ideal':  # ideal detector?
             self.det_E = [1.0]
             self.det_eta_E = [1.0]
         else:
@@ -373,7 +373,8 @@ def read_parameter_file(filename):
                                  SID=p['SID'], 
                                  SDD=p['SDD'], 
                                  eid=eid, 
-                                 h_iso=p['detector_px_height'])
+                                 h_iso=p['detector_px_height'],
+                                 detector_file=p['detector_filename'])
         these_params.append(ct)
         
         ## 3 : phantom
@@ -387,13 +388,16 @@ def read_parameter_file(filename):
         these_params.append(phantom)
 
         ## 4 : x-ray energy spectrum
-        spectrum = xRaySpectrum(name=p['spectrum_id'],
-                                filename=p['spectrum_filename'])
-        # Scale photon counts delivered to each detector channel (at isocenter) per projection.
-        counts_raw = spectrum.get_counts()
-        counts_per_proj_per_channel = p['N_photons_per_cm2_per_scan'] * ct.A_iso / ct.N_proj
-        spectrum.rescale_counts(counts_per_proj_per_channel / counts_raw)
-        these_params.append(spectrum)
+        try:
+            spectrum = xRaySpectrum(name=p['spectrum_id'],
+                                    filename=p['spectrum_filename'])
+            # Scale photon counts delivered to each detector channel (at isocenter) per projection.
+            counts_raw = spectrum.get_counts()
+            counts_per_proj_per_channel = p['N_photons_per_cm2_per_scan'] * ct.A_iso / ct.N_proj
+            spectrum.rescale_counts(counts_per_proj_per_channel / counts_raw)
+            these_params.append(spectrum)
+        except:
+            these_params.append('NO_SPECTRUM_ASSIGNED')
 
         if do_back_projection:
             these_params.append(p['N_recon_matrix'])  # N_matrix
