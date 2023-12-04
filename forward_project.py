@@ -218,7 +218,7 @@ def raytrace_fanbeam(ct, phantom, spec):
         uL_E = siddons_2D(src_x, src_y, trg_x, trg_y, matrix_stack[i_energy], phantom.dx)
         uL_E = uL_E.reshape([ct.N_proj, ct.N_channels])
         sino_T_E[:,:,i_energy] = cp.exp(-uL_E)
-    print(f'raytracing  done, t={time() - t0:.2f}s')
+    print(f'raytracing done, t={time() - t0:.2f}s')
         
     # Process the transmitted energy information into an actual signal
     sino = detect_transmitted_sino(spec.E, spec.I0, sino_T_E, ct)
@@ -227,7 +227,7 @@ def raytrace_fanbeam(ct, phantom, spec):
     EPS = 1  #1e-8 
     sino = sino.clip(EPS, None)
     
-    print(f'forward project  done, t={time() - t0:.2f}s')
+    print(f'forward project done, t={time() - t0:.2f}s')
     return sino.get() 
 
 
