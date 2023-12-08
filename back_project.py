@@ -98,7 +98,7 @@ def get_recon_coords(N_matrix, FOV):
     return r_matrix, theta_matrix
 
 
-def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta):
+def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta, verbose=False):
     """
     Reconstruct a log'd sinogram using fan-beam filtered back-projection.
 
@@ -133,7 +133,7 @@ def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta):
 
     t0 = time()
     for i_proj in range(N_proj):  # create the fbp for each projection view i
-        if i_proj%100 == 0:            
+        if i_proj%100 == 0 and verbose:            
             print(f'{i_proj} / {N_proj}, t={time() - t0:.2f}s')
 
         beta = i_proj*dbeta  # angle to x-ray source for each projection      
@@ -149,7 +149,7 @@ def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta):
     return matrix.get()
 
 
-def get_recon(sino_log, ct, spec, N_matrix, FOV, ramp):
+def get_recon(sino_log, ct, spec, N_matrix, FOV, ramp, verbose=False):
     '''
     Reconstruct a CT sinogram into a cross-sectional image.
 
@@ -179,7 +179,7 @@ def get_recon(sino_log, ct, spec, N_matrix, FOV, ramp):
     '''    
     sino_filtered = pre_process(sino_log, ct, ramp)
     r_matrix, theta_matrix = get_recon_coords(N_matrix, FOV)
-    recon = do_recon(sino_filtered, r_matrix, theta_matrix, ct.SID, ct.dgamma, ct.dtheta)
+    recon = do_recon(sino_filtered, r_matrix, theta_matrix, ct.SID, ct.dgamma, ct.dtheta, verbose)
     recon_HU = 1000*(recon - spec.u_water)/(spec.u_water - spec.u_air)
     return recon, recon_HU
 

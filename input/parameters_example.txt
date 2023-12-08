@@ -1,12 +1,12 @@
 {
-    "RUN_ID": "TEST_CYLINDER_5MAT",
+    "RUN_ID": "TEST_CYLINDER",
     "forward_project": true,
     "back_project": true,
         
     "phantom_type": "voxel",
-    "phantom_id": "ddc_generation4",
+    "phantom_id": "water",
     "phantom_filename": "./input/phantom/cylinder_5mats_512x512_uint8.bin",
-    "matcomp_filename": "./input/phantom/cylinder_materials.csv",
+    "matcomp_filename": "./input/phantom/cylinder_materials_water.csv",
     "Nx": 512,
     "Ny": 512,
     "Nz": 1,

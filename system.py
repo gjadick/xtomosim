@@ -189,9 +189,9 @@ class FanBeamGeometry:
         else:
             self.det_mode = 'pcd'  # photon counting
             
-        if detector_file is None:  # ideal detector?
-            self.det_E = [1.0]
-            self.det_eta_E = [1.0]
+        if detector_file is None:  # ideal detector? 2 data points in case we need to interp
+            self.det_E = np.array([1.0, 1000.0], dtype=np.float32)
+            self.det_eta_E = np.array([1.0, 1.0], dtype=np.float32)
         else:
             data = np.fromfile(detector_file, dtype=np.float32)
             N_det_energy = len(data)//2
