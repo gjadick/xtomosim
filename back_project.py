@@ -124,13 +124,11 @@ def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta, verbose=False):
     matrix : 2D numpy array ~ [N_matrix, N_matrix]
         The reconstructed CT image.
     """
-
     N_proj, N_cols = sino.shape
     N_matrix, _ = r_matrix.shape
     gamma_max = dgamma*N_cols/2
 
     matrix = cp.zeros([N_matrix, N_matrix], dtype=cp.float32)
-
     t0 = time()
     for i_proj in range(N_proj):  # create the fbp for each projection view i
         if i_proj%100 == 0 and verbose:            
@@ -139,11 +137,11 @@ def do_recon(sino, r_matrix, theta_matrix, SID, dgamma, dbeta, verbose=False):
         beta = i_proj*dbeta  # angle to x-ray source for each projection      
         gamma_targets = cp.arctan(r_matrix*cp.cos(beta - theta_matrix) / (r_matrix*cp.sin(beta - theta_matrix) + SID))
         L2_M = r_matrix**2 * cp.cos(beta - theta_matrix)**2 + (SID + r_matrix*cp.sin(beta - theta_matrix))**2
-        
         i_gamma0_matrix = ((gamma_targets + gamma_max)/dgamma).astype(cp.int32)   # matrix of indices (between 0 and N_cols-1) corresponding to sinogram pixels in row i_proj
+        
         fbp_i = cp.choose(i_gamma0_matrix, sino[i_proj], mode='clip')  # might want to lerp i_proj and i_proj+1 !!!
         fbp_i[cp.abs(gamma_targets).get() > gamma_max] = 0
-        
+        cp.nan_to_num(fbp_i, copy=False)  # just in case, check for NaN
         matrix += fbp_i * dbeta / L2_M
 
     return matrix.get()
