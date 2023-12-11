@@ -189,7 +189,7 @@ class FanBeamGeometry:
         else:
             self.det_mode = 'pcd'  # photon counting
             
-        if detector_file is None or detector_file is 'ideal':  # ideal detector?
+        if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector?
             self.det_E = [1.0]
             self.det_eta_E = [1.0]
         else:
@@ -281,7 +281,8 @@ class xRaySpectrum:
         return np.trapz(self.I0, x=self.E)
     
     def rescale_counts(self, scale, verbose=False):
-        print(f'rescaled counts : {self.get_counts():.2e} -> {scale*self.get_counts():.2e}')
+        if verbose:
+            print(f'rescaled counts : {self.get_counts():.2e} -> {scale*self.get_counts():.2e}')
         self.I0 = self.I0 * scale
 
 
