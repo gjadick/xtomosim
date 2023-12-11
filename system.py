@@ -189,9 +189,9 @@ class FanBeamGeometry:
         else:
             self.det_mode = 'pcd'  # photon counting
             
-        if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector?
-            self.det_E = [1.0]
-            self.det_eta_E = [1.0]
+        if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector? 2 data points in case we need to interp
+            self.det_E = np.array([1.0, 1000.0], dtype=np.float32)
+            self.det_eta_E = np.array([1.0, 1.0], dtype=np.float32)
         else:
             data = np.fromfile(detector_file, dtype=np.float32)
             N_det_energy = len(data)//2
@@ -410,18 +410,4 @@ def read_parameter_file(filename):
     return all_params
 
 
-
-
-# #%%
-
-# new_M3D = np.swapaxes(phantom.M3D, 0, 2)#.transpose(axes=[1])
-# new_M3D = np.array([M.T for M in new_M3D])
-# new_M = new_M3D[phantom.z_index]#.T
-# plt.imshow(new_M)
-# plt.show()
-
-# #%%
-# new_M3D.astype(np.uint8).tofile(phantom.phantom_filename)
-    
-    
     

@@ -228,10 +228,35 @@ def raytrace_fanbeam(ct, phantom, spec):
     sino = sino.clip(EPS, None)
     
     print(f'forward project done, t={time() - t0:.2f}s')
-    return sino.get() 
+    return sino
 
 
-def get_sino(ct, phantom, spec):
+def get_sino_from_recon(ct, recon_matrix, FOV):
+    # forward project through a reconstructed matrix (not voxel phantom!)
+    t0 = time()
+
+    # Compute some matrix params
+    Nx, Ny = recon_matrix.shape
+    px_sz = FOV / Nx  # assume isotropic
+    d_matrix = cp.array(recon_matrix, dtype=cp.float32)
+    
+    # Get coordinates for each source --> detector channel
+    d_thetas = cp.tile(cp.array(ct.thetas + cp.pi, dtype=cp.float32)[:, cp.newaxis], ct.N_channels).ravel()  # use newaxis for correct tiling
+    d_gammas = cp.tile(cp.array(ct.gammas, dtype=cp.float32), ct.N_proj)
+    src_x = ct.SID * cp.cos(d_thetas)
+    src_y = ct.SID * cp.sin(d_thetas)
+    trg_x = src_x - ct.SDD * cp.cos(d_thetas + d_gammas)
+    trg_y = src_y - ct.SDD * cp.sin(d_thetas + d_gammas)
+
+    # Raytrace + process into signal. Raw line integrals only ~ sum(mu * length)
+    line_integrals = siddons_2D(src_x, src_y, trg_x, trg_y, d_matrix, px_sz)
+    line_integrals = line_integrals.reshape([ct.N_proj, ct.N_channels])
+    
+    print(f'forward project through recon done, t={time() - t0:.2f}s')
+    return line_integrals  # on GPU!
+
+
+def get_sino(ct, phantom, spec, on_gpu=False):
     """
     Forward projects through the phantom using a given ct geometry and
     input polychromatic spectrum.
@@ -252,10 +277,13 @@ def get_sino(ct, phantom, spec):
     sino_log : 2D numpy array (float32)
         The logged sinogram normalized to the zero sinogram, i.e. -ln(I/I0)
     """
-    sino_raw = raytrace_fanbeam(ct, phantom, spec)
-    sino0 = detect_transmitted_sino(spec.E, spec.I0, cp.ones([1,1,1]), ct, noise=False).get()
-    sino_log = np.log(sino0/sino_raw)
-    return sino_raw, sino_log
+    d_sino_raw = raytrace_fanbeam(ct, phantom, spec)
+    d_sino0 = detect_transmitted_sino(spec.E, spec.I0, cp.ones([1,1,1]), ct, noise=False)
+    d_sino_log = np.log(d_sino0 / d_sino_raw)
+    if on_gpu:
+        return d_sino_raw, d_sino_log
+    else:
+        return d_sino_raw.get(), d_sino_log.get()
 
 
 
