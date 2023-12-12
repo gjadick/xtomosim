@@ -172,7 +172,7 @@ def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True):
         List of energy values in the spectrum (keV).
     I0_E : 1D np.array
         List of number of photons in each corresponding energy bin.
-    T_E : 1D np.array
+    T_E : n-D np.array  (cols, rows, energies)
         % of photons transmitted after the phantom, exp(-u*L), in each energy bin.
     ct : ScannerGeometry
         class with needed information about the detector and its efficiency
@@ -188,11 +188,18 @@ def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True):
     eta_E = cp.array(np.interp(E, ct.det_E, ct.det_eta_E), dtype=cp.float32)  # detector efficiency at target energies
     dE = np.append([E[0]], E[1:]-E[:-1])  # energy bin widths, 1st is 0 to E[0]
     signal_E = cp.array(I0_E * dE) * eta_E * sino_T_E  # signal in each energy bin
-    if noise:
+    
+    if noise:  # Poisson counting noise
         signal_E = cp.random.poisson(signal_E, dtype=cp.int32)  # might need to increase to int64?
+        
     if ct.eid:
-        signal_E = cp.array(E) * signal_E            
-    signal = cp.sum(signal_E, axis=2)
+        signal_E = cp.array(E) * signal_E  
+          
+    signal = cp.sum(signal_E, axis=2)  
+    
+    if noise:   # Gaussian electronic noise
+        signal += cp.random.normal(0, ct.std_e, signal.shape)  
+        
     return signal
 
 

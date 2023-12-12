@@ -179,7 +179,7 @@ def row_to_matcomp(row):
 
 
 class FanBeamGeometry:
-    def __init__(self, eid=True, detector_file=None, h_iso=1.0,
+    def __init__(self, eid=True, detector_file=None, detector_std_electronic=0, h_iso=1.0,
                  SID=50.0, SDD=100.0, N_channels=360, gamma_fan=np.pi/4, 
                  N_proj=1000, theta_tot=2*np.pi):
 
@@ -189,6 +189,7 @@ class FanBeamGeometry:
         else:
             self.det_mode = 'pcd'  # photon counting
             
+        self.std_e = detector_std_electronic  # electronic noise standard dev
         if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector? 2 data points in case we need to interp
             self.det_E = np.array([1.0, 1000.0], dtype=np.float32)
             self.det_eta_E = np.array([1.0, 1.0], dtype=np.float32)
@@ -198,8 +199,8 @@ class FanBeamGeometry:
             self.det_E = data[:N_det_energy]      # 1st half is energies
             self.det_eta_E = data[N_det_energy:]  # 2nd half is detective efficiencies
  
-        # name the geometry        
-        #self.geo_id = f'{int(SID)}cm_{int(SDD)}cm_{int(180*gamma_fan/np.pi)}fan_{N_proj}view_{N_channels}col'     
+        # name the geometry       
+        # this is old! missing a few params (electronic noise, detector efficiency)
         self.geo_id = f'{int(SID)}cm_{int(SDD)}cm_{int(180*gamma_fan/np.pi)}fan_{N_proj}view_{N_channels}col_{self.det_mode}'
         
         # source-isocenter and source-detector distances
@@ -375,7 +376,8 @@ def read_parameter_file(filename):
                                  SDD=p['SDD'], 
                                  eid=eid, 
                                  h_iso=p['detector_px_height'],
-                                 detector_file=p['detector_filename'])
+                                 detector_file=p['detector_filename'],
+                                 detector_std_electronic=p['detector_std_electronic'])
         these_params.append(ct)
         
         ## 3 : phantom
