@@ -162,7 +162,7 @@ def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_ma
     return line_integrals  # still on the device! 
 
 
-def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True):
+def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True, EPS=1e-8):
     """
     Function to calculate noisy detected signal in a single sinogram pixel.
 
@@ -197,8 +197,12 @@ def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True):
           
     signal = cp.sum(signal_E, axis=2)  
     
-    if noise:   # Gaussian electronic noise
-        signal += cp.random.normal(0, ct.std_e, signal.shape)  
+    if noise and (ct.std_e>EPS):   # Gaussian electronic noise
+        if ct.eid: 
+            noise_scale = np.average(E, weights=I0_E)
+        else:  # pcd
+            noise_scale = 1.0
+        signal += cp.random.normal(0, ct.std_e*noise_scale, signal.shape)  
         
     return signal
 
