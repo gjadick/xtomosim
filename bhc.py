@@ -72,7 +72,7 @@ def bhc_water(d_sino_log, spec, ct, deg=4, EPS=1e-8, mu_eff=None):
 
 
 def bhc_bone(sino_log, spec, ct, N_matrix, FOV, ramp,
-                    deg=4, EPS=1e-8, mu_eff=None, mu_bone_thresh=0.3):
+                    deg=4, EPS=1e-8, mu_eff=None, mu_bone_thresh=0.3, scale=None):
     """
     Apply the bone beam hardening correction described in Hsieh's textbook.
     This takes the original sinogram as input and then applies the water BHC.
@@ -129,10 +129,11 @@ def bhc_bone(sino_log, spec, ct, N_matrix, FOV, ramp,
     # Correct the artifact using a linear combination of the water BHC image + bone artifact image.
     # These artifact scales have been hand-tuned for a few spectra. There's probably a better way to compute them.
     scale_dict = {'80kV': 0.028, '120kV': 0.053, '140kV': 0.065}
-    try:
-        scale = scale_dict[spec.name]
-    except:
-        scale = 0.05  # default to 5% scale (arbitrary!! YMMV)
+    if scale is None:
+        try:
+            scale = scale_dict[spec.name]
+        except:
+            scale = 0.05  # default to 5% scale (arbitrary!! YMMV)
 
     recon_bone_corrected = recon_waterBHC + scale*recon_bone_artifact
     recon_bone_corrected_HU = 1000 * (recon_bone_corrected - spec.u_water) / (spec.u_water - spec.u_air)
