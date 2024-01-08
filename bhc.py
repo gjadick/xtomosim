@@ -71,18 +71,17 @@ def bhc_water(d_sino_log, spec, ct, deg=4, EPS=1e-8, mu_eff=None):
     return d_sino_corrected
 
 
-def bhc_bone(sino_log, spec, ct, N_matrix, FOV, ramp,
+def bhc_bone(sino_waterBHC, spec, ct, N_matrix, FOV, ramp,
                     deg=4, EPS=1e-8, mu_eff=None, mu_bone_thresh=0.3, scale=None):
     """
     Apply the bone beam hardening correction described in Hsieh's textbook.
-    This takes the original sinogram as input and then applies the water BHC.
     This bone BHC algorithm involves considerably more hand-tuning than the 
     polynomial fit water BHC implemented above.
 
     Parameters
     ----------
-    sino_log : numpy array 
-        Original log'd sinogram (without any BHC).
+    sino_waterBHC : numpy array 
+        Water beam-hardening corrected log'd sinogram.
     spec : xRaySpectrum
         Spectrum for the sinogram acquisition.
     ct : ScannerGeometry
@@ -111,9 +110,8 @@ def bhc_bone(sino_log, spec, ct, N_matrix, FOV, ramp,
     recon_bone_corrected, recon_bone_corrected_HU : 2D numpy arrays
 
     """
-    # First, apply water BHC to sinogram + reconstruct.
-    d_sino_log = cp.array(sino_log, dtype=cp.float32)
-    d_sino_waterBHC = bhc_water(d_sino_log, spec, ct, deg, EPS, mu_eff)    
+    # First, water BHC reconstruct.
+    d_sino_waterBHC = cp.array(sino_waterBHC, dtype=cp.float32) 
     recon_waterBHC, _ = get_recon(d_sino_waterBHC.get(), ct, spec, N_matrix, FOV, ramp) 
 
     # mu_bone_thresh = 0.3 # cm^-1  ~ 500 HU (hand-tuned)

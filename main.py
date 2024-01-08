@@ -18,8 +18,8 @@ from bhc import bhc_water, bhc_bone
 param_file = 'input/parameters_example.txt'
 main_output_dir = './output/'  
 show_imgs = True
-do_bhc_water = True   # TODO : move this to param file
-do_bhc_bone = False
+do_bhc_water = False   # TODO : move this to param file
+do_bhc_bone = True
 
 plt.rcParams.update({
     'figure.dpi': 300,
@@ -57,8 +57,6 @@ if __name__ == '__main__':
 
     all_params = read_parameter_file(param_file)
     N_runs = len(all_params)
-    if do_bhc_bone:
-        do_bhc_water = False  # just in case, turn off water BHC, use bone BHC instead
         
     for i_run, params in enumerate(all_params):
         print('\n', f'*** Run {i_run + 1} / {N_runs} ***')
@@ -80,7 +78,7 @@ if __name__ == '__main__':
             sino_raw.astype(np.float32).tofile(out_dir+'sino_raw_float32.bin')
             sino_log.astype(np.float32).tofile(out_dir+'sino_log_float32.bin')
             
-            if do_bhc_water: 
+            if do_bhc_water or do_bhc_bone: 
                 d_sino_waterBHC = bhc_water(d_sino_log, spec, ct)
                 sino_waterBHC = d_sino_waterBHC.get()
                 sino_waterBHC.astype(np.float32).tofile(out_dir+'sino_waterBHC_float32.bin')
@@ -98,13 +96,13 @@ if __name__ == '__main__':
         if do_back_projection:
             print('Back projecting!')
         
-            # Load the sinogram + assign output name (depends on the BHC to use)
-            if do_bhc_water and not do_bhc_bone:
+            # Load the sinogram + assign output name
+            if do_bhc_bone:
+                sino_fname = 'sino_waterBHC_float32.bin'
+                recon_fname = 'recon_boneBHC'
+            elif do_bhc_water:
                 sino_fname = 'sino_waterBHC_float32.bin'
                 recon_fname = 'recon_waterBHC'
-            elif do_bhc_bone:
-                sino_fname = 'sino_log_float32.bin'
-                recon_fname = 'recon_boneBHC'
             else:
                 sino_fname = 'sino_log_float32.bin'
                 recon_fname = 'recon'
