@@ -406,8 +406,13 @@ def read_parameter_file(filename):
             these_params.append(p['N_recon_matrix'])  # N_matrix
             these_params.append(p['FOV_recon'])  # FOV
             these_params.append(p['ramp_filter_percent_Nyquist'])  # ramp
-            
-        all_params.append(these_params)
+        
+        if 'N_repeats' in p:
+            for i in range(p['N_repeats']):
+                these_params[0] = p['RUN_ID'] + f'/repeat{i:03}'
+                all_params.append(these_params)
+        else:
+            all_params.append(these_params)
 
     return all_params
 

@@ -18,7 +18,7 @@ from bhc import bhc_water, bhc_bone
 param_file = 'input/parameters_example.txt'
 main_output_dir = './output/'  
 show_imgs = True
-do_bhc_water = True
+do_bhc_water = True   # TODO : move this to param file
 do_bhc_bone = False
 
 plt.rcParams.update({
@@ -125,4 +125,6 @@ if __name__ == '__main__':
                 fig.tight_layout()
                 plt.show()
                 
+
+
 
