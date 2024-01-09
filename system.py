@@ -182,7 +182,10 @@ class FanBeamGeometry:
     def __init__(self, eid=True, detector_file=None, detector_std_electronic=0, h_iso=1.0,
                  SID=50.0, SDD=100.0, N_channels=360, gamma_fan=np.pi/4, 
                  N_proj=1000, theta_tot=2*np.pi):
-
+        
+        self.geometry = 'fan_beam'
+        self.noise = True  # set False for testing
+        
         self.eid = eid  
         if eid: 
             self.det_mode = 'eid'  # energy integrating
@@ -214,8 +217,8 @@ class FanBeamGeometry:
         self.gammas = np.arange(-gamma_fan/2, gamma_fan/2, self.dgamma) + self.dgamma/2  ## might need to offset ?
         
         # detector pixel dimensions
-        self.s = SDD*gamma_fan/N_channels  # width [cm2] i.e. `s` sampling distance at the detector
-        self.s_iso = SID*gamma_fan/N_channels  # width [cm2] at isocenter `iso`
+        self.s = SDD*gamma_fan/N_channels  # width [cm] i.e. `s` sampling distance at the detector
+        self.s_iso = SID*gamma_fan/N_channels  # width [cm] at isocenter `iso`
         self.h_iso = h_iso  # height [cm2], for fanbeam same at detector and isocenter
         self.A_iso = self.s_iso*self.h_iso   # area [cm2]
         
@@ -231,6 +234,60 @@ class FanBeamGeometry:
 
         if len(self.gammas) > N_channels:
             self.gammas = self.gammas[:N_channels]
+            
+            
+            
+class ParallelBeamGeometry:
+    def __init__(self, eid=True, detector_file=None, detector_std_electronic=0, h_iso=1.0,
+                 SID=50.0, SDD=100.0, N_channels=360, beam_width=50.0, 
+                 N_proj=1000, theta_tot=2*np.pi):
+        
+        self.geometry = 'parallel_beam'
+        self.noise = True  # set False for testing
+        self.eid = eid  
+        if eid: 
+            self.det_mode = 'eid'  # energy integrating
+        else:
+            self.det_mode = 'pcd'  # photon counting
+            
+        self.std_e = detector_std_electronic  # electronic noise standard dev
+        if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector? 2 data points in case we need to interp
+            self.det_E = np.array([1.0, 1000.0], dtype=np.float32)
+            self.det_eta_E = np.array([1.0, 1.0], dtype=np.float32)
+        else:
+            data = np.fromfile(detector_file, dtype=np.float32)
+            N_det_energy = len(data)//2
+            self.det_E = data[:N_det_energy]      # 1st half is energies
+            self.det_eta_E = data[N_det_energy:]  # 2nd half is detective efficiencies
+         
+        # source-isocenter and source-detector distances
+        self.SID = SID
+        self.SDD = SDD
+        
+        # multi-channel parallel-beam detector 
+        self.N_channels = N_channels
+        self.beam_width = beam_width
+        self.s = beam_width / N_channels # pixel width, i.e. sampling distance at detector
+        self.channels = np.arange(-beam_width/2, beam_width/2, self.s) + self.s/2  ## might need to offset ?
+        
+        # detector pixel dimensions
+        self.s_iso = self.s  # equivalent for parallel beam
+        self.h_iso = h_iso  # equivalent without cone
+        self.A_iso = self.s_iso*self.h_iso   # area [cm2]
+        
+        # projection views (angles `theta`)
+        self.N_proj = N_proj
+        self.theta_tot = theta_tot
+        self.dtheta = theta_tot/N_proj
+        self.thetas = np.arange(0, theta_tot, self.dtheta )
+        
+        # just a check
+        if len(self.thetas) > N_proj:
+            self.thetas = self.thetas[:N_proj]
+
+        if len(self.channels) > N_channels:
+            self.channels = self.channels[:N_channels]
+
 
     
 class xRaySpectrum:
@@ -366,11 +423,11 @@ def read_parameter_file(filename):
         these_params = [run_id, do_forward_projection, do_back_projection]  # init
 
         ## 2 : scanner geometry
-        eid = p['detector_mode'] == 'eid'
+        eid = p['detector_mode'] == 'eid'  # convert to bool
         if p['scanner_geometry'] == 'fan_beam':
             ct = FanBeamGeometry(N_channels=p['N_channels'], 
                                  N_proj=p['N_projections'],
-                                 gamma_fan=p['fan_angle_total'], 
+                                 gamma_fan=p['fan_angle_total'],  # only difference with ParallelBeam params!
                                  theta_tot=p['rotation_angle_total'],
                                  SID=p['SID'], 
                                  SDD=p['SDD'], 
@@ -378,6 +435,17 @@ def read_parameter_file(filename):
                                  h_iso=p['detector_px_height'],
                                  detector_file=p['detector_filename'],
                                  detector_std_electronic=p['detector_std_electronic'])
+        elif p['scanner_geometry'] == 'parallel_beam':
+            ct = ParallelBeamGeometry(N_channels=p['N_channels'], 
+                                      N_proj=p['N_projections'],
+                                      beam_width=p['beam_width'],  # only difference with FanBeam params!
+                                      theta_tot=p['rotation_angle_total'],
+                                      SID=p['SID'], 
+                                      SDD=p['SDD'], 
+                                      eid=eid, 
+                                      h_iso=p['detector_px_height'],
+                                      detector_file=p['detector_filename'],
+                                      detector_std_electronic=p['detector_std_electronic'])
         these_params.append(ct)
         
         ## 3 : phantom

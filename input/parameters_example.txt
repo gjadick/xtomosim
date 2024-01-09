@@ -1,12 +1,12 @@
 {
-    "RUN_ID": "TEST_CYLINDER_ELECNOISE",
+    "RUN_ID": "TEST_PARALLELBEAM",
     "forward_project": true,
     "back_project": true,
         
     "phantom_type": "voxel",
     "phantom_id": "water",
     "phantom_filename": "./input/phantom/cylinder_5mats_512x512_uint8.bin",
-    "matcomp_filename": "./input/phantom/cylinder_materials_water.csv",
+    "matcomp_filename": "./input/phantom/cylinder_materials.csv",
     "Nx": 512,
     "Ny": 512,
     "Nz": 1,
@@ -15,22 +15,22 @@
     "dz": 0.09765625,
     "z_index": 0,
     
-    "scanner_geometry": "fan_beam",
+    "scanner_geometry": "parallel_beam",
     "SID": 60.0,
     "SDD": 100.0,
-    "N_channels": 1200,
-    "N_projections": 800,
-    "fan_angle_total": 0.8230337,
+    "N_channels": 800,
+    "N_projections": 1200,
+    "beam_width": 50.0,
     "rotation_angle_total": 6.283185,
     
     "detector_px_height": 1.0,
     "detector_mode": "eid",
-    "detector_std_electronic": 8000,
+    "detector_std_electronic": 0,
     "detector_filename": "ideal",
 
     "spectrum_id": "120kV",
     "spectrum_filename": "./input/spectrum/120kV_1mGy_float32.bin",
-    "N_photons_per_cm2_per_scan": 500e8,
+    "N_photons_per_cm2_per_scan": 500e7,
 
     "N_recon_matrix": 512,
     "FOV_recon": 50.0,

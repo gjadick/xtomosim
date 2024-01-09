@@ -55,7 +55,7 @@ siddons_2D_raw = cp.RawKernel(
         // Sometimes weird results for small N?
         float a_minf = fmaxf( fminf(aX_1, aX_Nx), fminf(aY_1, aY_Ny) );
         float a_maxf = fminf( fmaxf(aX_1, aX_Nx), fmaxf(aY_1, aY_Ny) );
-        
+
         // Compute phantom intersection start and end indices in x,y directions.
         float i_minf, i_maxf, j_minf, j_maxf;
         if (dx >= 0.0) {   // moving right
@@ -207,17 +207,28 @@ def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True, EPS=1e-8):
     return signal
 
 
-def raytrace_fanbeam(ct, phantom, spec):
+def raytrace(ct, phantom, spec):
     
     t0 = time()
 
     # Get coordinates for each source --> detector channel
     d_thetas = cp.tile(cp.array(ct.thetas + cp.pi, dtype=cp.float32)[:, cp.newaxis], ct.N_channels).ravel()  # use newaxis for correct tiling
-    d_gammas = cp.tile(cp.array(ct.gammas, dtype=cp.float32), ct.N_proj)
-    src_x = ct.SID * cp.cos(d_thetas)
-    src_y = ct.SID * cp.sin(d_thetas)
-    trg_x = src_x - ct.SDD * cp.cos(d_thetas + d_gammas)
-    trg_y = src_y - ct.SDD * cp.sin(d_thetas + d_gammas)
+    
+    if ct.geometry == 'fan_beam':
+        d_gammas = cp.tile(cp.array(ct.gammas, dtype=cp.float32), ct.N_proj)
+        src_x = ct.SID * cp.cos(d_thetas)
+        src_y = ct.SID * cp.sin(d_thetas)
+        trg_x = src_x - ct.SDD * cp.cos(d_thetas + d_gammas)
+        trg_y = src_y - ct.SDD * cp.sin(d_thetas + d_gammas)
+    elif ct.geometry == 'parallel_beam':
+        d_channels = cp.tile(cp.array(ct.channels, dtype=cp.float32), ct.N_proj)
+        src_x = ct.SID * cp.cos(d_thetas) + d_channels * cp.cos(d_thetas + cp.pi/2)
+        src_y = ct.SID * cp.sin(d_thetas) + d_channels * cp.sin(d_thetas + cp.pi/2)
+        trg_x = (ct.SDD - ct.SID) * cp.cos(d_thetas + cp.pi) + d_channels * cp.cos(d_thetas + cp.pi/2)
+        trg_y = (ct.SDD - ct.SID) * cp.sin(d_thetas + cp.pi) + d_channels * cp.sin(d_thetas + cp.pi/2)
+    else:
+        print('CT geometry should be `fan_beam` or `parallel_beam`!')
+        return -1
 
     # For each monoenergy, raytrace for all the source, targets
     matrix_stack = phantom.M_mono_stack(spec.E) 
@@ -232,7 +243,7 @@ def raytrace_fanbeam(ct, phantom, spec):
     print(f'raytracing done, t={time() - t0:.2f}s')
         
     # Process the transmitted energy information into an actual signal
-    sino = detect_transmitted_sino(spec.E, spec.I0, sino_T_E, ct)
+    sino = detect_transmitted_sino(spec.E, spec.I0, sino_T_E, ct, noise=ct.noise)
     
     # Fix div by 0?
     EPS = 1  #1e-8 
@@ -243,6 +254,11 @@ def raytrace_fanbeam(ct, phantom, spec):
 
 
 def get_sino_from_recon(ct, recon_matrix, FOV):
+    
+    if ct.geometry != 'fan_beam':
+        print('Sino from recon only defined for fan beam geometry!')
+        return -1
+    
     # forward project through a reconstructed matrix (not voxel phantom!)
     t0 = time()
 
@@ -288,7 +304,7 @@ def get_sino(ct, phantom, spec, on_gpu=False):
     sino_log : 2D numpy array (float32)
         The logged sinogram normalized to the zero sinogram, i.e. -ln(I/I0)
     """
-    d_sino_raw = raytrace_fanbeam(ct, phantom, spec)
+    d_sino_raw = raytrace(ct, phantom, spec)
     d_sino0 = detect_transmitted_sino(spec.E, spec.I0, cp.ones([1,1,1]), ct, noise=False)
     d_sino_log = np.log(d_sino0 / d_sino_raw)
     if on_gpu:
@@ -296,6 +312,6 @@ def get_sino(ct, phantom, spec, on_gpu=False):
     else:
         return d_sino_raw.get(), d_sino_log.get()
 
-
-
+    
+    
 

@@ -18,8 +18,8 @@ from bhc import bhc_water, bhc_bone
 param_file = 'input/parameters_example.txt'
 main_output_dir = './output/'  
 show_imgs = True
-do_bhc_water = False   # TODO : move this to param file
-do_bhc_bone = True
+do_bhc_water = True   # TODO : move this to param file
+do_bhc_bone = False
 
 plt.rcParams.update({
     'figure.dpi': 300,
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         os.makedirs(out_dir, exist_ok=True)
         shutil.copy(param_file, os.path.join(out_dir, 'params.txt'))
  
-        if do_forward_projection:
+        if True: #do_forward_projection:
             print('Forward projecting!')
             d_sino_raw, d_sino_log = get_sino(ct, phantom, spec, on_gpu=True)   
             sino_raw, sino_log = d_sino_raw.get(), d_sino_log.get()
