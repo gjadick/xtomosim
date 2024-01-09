@@ -55,6 +55,10 @@ siddons_2D_raw = cp.RawKernel(
         // Sometimes weird results for small N?
         float a_minf = fmaxf( fminf(aX_1, aX_Nx), fminf(aY_1, aY_Ny) );
         float a_maxf = fminf( fmaxf(aX_1, aX_Nx), fmaxf(aY_1, aY_Ny) );
+        
+        // Check whether src/trg are inside the CT matrix.
+        if (0 > a_minf) {a_minf = 0;}
+        if (1 < a_maxf) {a_maxf = 1;}
 
         // Compute phantom intersection start and end indices in x,y directions.
         float i_minf, i_maxf, j_minf, j_maxf;
