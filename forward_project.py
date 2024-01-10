@@ -22,7 +22,8 @@ siddons_2D_raw = cp.RawKernel(
      int i = threadIdx.x + blockDim.x * blockIdx.x; //+ threadIdx.y + blockDim.y * blockIdx.y;
      
      if (i < N_rays) {
-        float EPS = 1.0E-4;   // set relatively large for rounding later
+        // float EPS = 1.0E-4;  // set relatively large for rounding later 
+        float EPS = 1.0E-8;   // smaller EPS for micro-CT scale (manual adjust)
         float x1 = src_x[i];  // source coordinates
         float y1 = src_y[i];
         float x2 = trg_x[i];  // target coordinates
@@ -142,29 +143,64 @@ siddons_2D_raw = cp.RawKernel(
     """
 )
 
-                             
-def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_max=1024):
+def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_max=1024, max_bits=10e9):
 
-    N_rays = src_x.size
+    N_rays_tot = src_x.size
     N_matrix = matrix.shape[0]
-    # bits = (N_rays*5 + N_matrix**2 + 4*N_rays*(N_matrix+1)) * np.dtype(np.float32).itemsize
-    # print(f'{N_rays} rays, {N_matrix} matrix = {bits/1e9:.4f} GB')
-        
-    # Initialize empty arrays to store parametric intersections for each ray
-    a_x = cp.zeros(N_rays * (N_matrix+1), dtype=cp.float32)
-    a_y = cp.zeros(N_rays * (N_matrix+1), dtype=cp.float32)
-    alphas = cp.zeros(2*N_rays * (N_matrix+1), dtype=cp.float32)
-    line_integrals = cp.zeros(N_rays, dtype=cp.float32)
     
-    # Assign block/grid sizes (1D) and run.    
-    siddons_2D_raw(block=(min(N_rays, N_threads_max), 1, 1), 
-                   grid=(1 + N_rays//N_threads_max, 1, 1),
-                   args=(N_rays, src_x, src_y, trg_x, trg_y, 
-                         matrix, N_matrix, cp.float32(sz_matrix_pixel),
-                         a_x, a_y, alphas, line_integrals))
+    # make sure things are the correct data types
+    src_x = src_x.astype(cp.float32)
+    src_y = src_y.astype(cp.float32)
+    trg_x = trg_x.astype(cp.float32)
+    trg_y = trg_y.astype(cp.float32)
+    matrix = matrix.astype(cp.float32)
     
-    return line_integrals  # still on the device! 
+    # Divide into batches if needed. Can get memory error if max_bits too large
+    N_batches = 1  
+    N_rays_batch = N_rays_tot
+    sino_bits = N_rays_tot * np.dtype(np.float32).itemsize  # make sure to separately alloc enough space for sino storage
+    bits = (N_rays_tot*5 + N_matrix**2 + 4*N_rays_tot*(N_matrix+1)) * np.dtype(np.float32).itemsize
+    print(f'Forward projecting {N_rays_tot} rays, {N_matrix} matrix = {bits/1e9:.4f} GB')
+    while bits + sino_bits > max_bits:
+        N_batches += 1
+        N_rays_batch = np.ceil(src_x.size / N_batches).astype(int)
+        bits = (N_rays_batch*5 + N_matrix**2 + 4*N_rays_batch*(N_matrix+1)) * np.dtype(np.float32).itemsize
+    if N_batches > 1:
+        print(f'Total memory needed is larger than max {max_bits/1e9:.1f} GB')
+        print(f'Running {N_batches} batches of {N_rays_batch} rays each')
 
+    line_integrals = cp.zeros(N_rays_tot, dtype=cp.float32)
+    t0 = time()
+    for i in range(N_batches):
+        if (i == N_batches - 1):  # last batch! reduce size
+            N_rays = N_rays_tot - i*N_rays_batch
+        else:
+            N_rays = N_rays_batch
+        
+        # Clip the inputs
+        i0 = i * N_rays_batch 
+        src_x_batch = src_x[i0:i0+N_rays] 
+        src_y_batch = src_y[i0:i0+N_rays] 
+        trg_x_batch = trg_x[i0:i0+N_rays] 
+        trg_y_batch = trg_y[i0:i0+N_rays] 
+
+        # Initialize empty arrays to store parametric intersections for each ray
+        a_x = cp.zeros(N_rays * (N_matrix+1), dtype=cp.float32)
+        a_y = cp.zeros(N_rays * (N_matrix+1), dtype=cp.float32)
+        alphas = cp.zeros(2*N_rays * (N_matrix+1), dtype=cp.float32)
+        line_integrals_batch = cp.zeros(N_rays, dtype=cp.float32)
+        
+        # Assign block/grid sizes (1D) and run.    
+        siddons_2D_raw(block=(min(N_rays, N_threads_max), 1, 1), 
+                        grid=(1 + N_rays//N_threads_max, 1, 1),
+                        args=(N_rays, src_x_batch, src_y_batch, trg_x_batch, trg_y_batch, 
+                              matrix, N_matrix, cp.float32(sz_matrix_pixel),
+                              a_x, a_y, alphas, line_integrals_batch))
+        line_integrals[i0:i0+N_rays] = line_integrals_batch
+        print(f'  batch {i+1} / {N_batches} done - {time() - t0:.2f}s')  # sometimes this is unsync'd
+        
+    return line_integrals  # still on the device!                              
+                    
 
 def detect_transmitted_sino(E, I0_E, sino_T_E, ct, noise=True, EPS=1e-8):
     """
@@ -317,5 +353,4 @@ def get_sino(ct, phantom, spec, on_gpu=False):
         return d_sino_raw.get(), d_sino_log.get()
 
     
-    
-
+   
