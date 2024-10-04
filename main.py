@@ -15,11 +15,19 @@ from forward_project import get_sino
 from back_project import get_recon
 from bhc import bhc_water, bhc_bone
 
+
+###########################################################
+###### INPUTS ######
+###########################################################
+
 param_file = 'input/parameters_example.txt'
 main_output_dir = './output/'  
 show_imgs = True
 do_bhc_water = True   # TODO : move this to param file
 do_bhc_bone = False
+
+###########################################################
+
 
 plt.rcParams.update({
     'figure.dpi': 300,
