@@ -198,7 +198,7 @@ def do_fbp(sino, r_matrix, theta_matrix, SID, dchannel, dbeta, verbose=False):
     matrix = cp.zeros([N_matrix, N_matrix], dtype=cp.float32)
     t0 = time()
     for i_proj in range(N_proj):  # create the fbp for each projection view i
-        if i_proj%100 == 0:            
+        if i_proj%1000 == 0:            
             print(f'{i_proj} / {N_proj}, t={time() - t0:.2f}s')
 
         beta = i_proj * dbeta + np.pi

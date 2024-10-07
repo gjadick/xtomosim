@@ -143,7 +143,7 @@ siddons_2D_raw = cp.RawKernel(
     """
 )
 
-def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_max=1024, max_bits=10e9):
+def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_max=1024, max_bits=10e9, N_rays_batch=None):
 
     N_rays_tot = src_x.size
     N_matrix = matrix.shape[0]
@@ -156,18 +156,23 @@ def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_ma
     matrix = matrix.astype(cp.float32)
     
     # Divide into batches if needed. Can get memory error if max_bits too large
-    N_batches = 1  
-    N_rays_batch = N_rays_tot
-    sino_bits = N_rays_tot * np.dtype(np.float32).itemsize  # make sure to separately alloc enough space for sino storage
-    bits = (N_rays_tot*5 + N_matrix**2 + 4*N_rays_tot*(N_matrix+1)) * np.dtype(np.float32).itemsize
-    print(f'Forward projecting {N_rays_tot} rays, {N_matrix} matrix = {bits/1e9:.4f} GB')
-    while bits + sino_bits > max_bits:
-        N_batches += 1
-        N_rays_batch = np.ceil(src_x.size / N_batches).astype(int)
+    if N_rays_batch is None:
+        N_batches = 1  
+        N_rays_batch = N_rays_tot
+        sino_bits = N_rays_tot * np.dtype(np.float32).itemsize  # make sure to separately alloc enough space for sino storage
+        bits = (N_rays_tot*5 + N_matrix**2 + 4*N_rays_tot*(N_matrix+1)) * np.dtype(np.float32).itemsize
+        print(f'Forward projecting {N_rays_tot} rays, {N_matrix} matrix = {bits/1e9:.4f} GB')
+        while bits + sino_bits > max_bits:
+            N_batches += 1
+            N_rays_batch = np.ceil(N_rays_tot / N_batches).astype(int)
+            bits = (N_rays_batch*5 + N_matrix**2 + 4*N_rays_batch*(N_matrix+1)) * np.dtype(np.float32).itemsize
+        if N_batches > 1:
+            print(f'Total memory needed is larger than max {max_bits/1e9:.1f} GB')
+    else:  # use pre-defined batch size
+        N_batches = np.ceil(N_rays_tot / N_rays_batch).astype(int)
         bits = (N_rays_batch*5 + N_matrix**2 + 4*N_rays_batch*(N_matrix+1)) * np.dtype(np.float32).itemsize
-    if N_batches > 1:
-        print(f'Total memory needed is larger than max {max_bits/1e9:.1f} GB')
-        print(f'Running {N_batches} batches of {N_rays_batch} rays each')
+        print(f'Memory per batch is max {bits/1e9:.1f} GB')
+    print(f'Running {N_batches} batches of {N_rays_batch} rays each')
 
     line_integrals = cp.zeros(N_rays_tot, dtype=cp.float32)
     t0 = time()
@@ -197,7 +202,7 @@ def siddons_2D(src_x, src_y, trg_x, trg_y, matrix, sz_matrix_pixel, N_threads_ma
                               matrix, N_matrix, cp.float32(sz_matrix_pixel),
                               a_x, a_y, alphas, line_integrals_batch))
         line_integrals[i0:i0+N_rays] = line_integrals_batch
-        print(f'  batch {i+1} / {N_batches} done - {time() - t0:.2f}s')  # sometimes this is unsync'd
+        #print(f'  batch {i+1} / {N_batches} done - {time() - t0:.2f}s')  # sometimes this is unsync'd
         
     return line_integrals  # still on the device!                              
                     
