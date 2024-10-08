@@ -181,7 +181,7 @@ def row_to_matcomp(row):
 class FanBeamGeometry:
     def __init__(self, eid=True, detector_file=None, detector_std_electronic=0, h_iso=1.0,
                  SID=50.0, SDD=100.0, N_channels=360, gamma_fan=np.pi/4, 
-                 N_proj=1000, theta_tot=2*np.pi):
+                 N_proj=1000, theta_tot=2*np.pi, spectral_threshold=None):
         
         self.geometry = 'fan_beam'
         self.noise = True  # set False for testing
@@ -191,7 +191,8 @@ class FanBeamGeometry:
             self.det_mode = 'eid'  # energy integrating
         else:
             self.det_mode = 'pcd'  # photon counting
-            
+        self.spectral_threshold = spectral_threshold  # for spectral PCD mode [keV]
+
         self.std_e = detector_std_electronic  # electronic noise standard dev
         if (detector_file is None) or (detector_file == 'ideal'):  # ideal detector? 2 data points in case we need to interp
             self.det_E = np.array([1.0, 1000.0], dtype=np.float32)
@@ -424,6 +425,10 @@ def read_parameter_file(filename):
 
         ## 2 : scanner geometry
         eid = p['detector_mode'] == 'eid'  # convert to bool
+        if 'spectral_threshold' in p:  # spectral PCD mode?
+            p_spectral_thresh = p['spectral_threshold']
+        else:
+            p_spectral_thresh = None
         if p['scanner_geometry'] == 'fan_beam':
             ct = FanBeamGeometry(N_channels=p['N_channels'], 
                                  N_proj=p['N_projections'],
@@ -434,7 +439,8 @@ def read_parameter_file(filename):
                                  eid=eid, 
                                  h_iso=p['detector_px_height'],
                                  detector_file=p['detector_filename'],
-                                 detector_std_electronic=p['detector_std_electronic'])
+                                 detector_std_electronic=p['detector_std_electronic'],
+                                 spectral_threshold=p_spectral_thresh)
         elif p['scanner_geometry'] == 'parallel_beam':
             ct = ParallelBeamGeometry(N_channels=p['N_channels'], 
                                       N_proj=p['N_projections'],
